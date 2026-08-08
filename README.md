@@ -6,7 +6,7 @@ A comprehensive safety verification framework for autonomous driving systems tha
 
 AI-Aware PCB provides tools to:
 - **Characterize perception errors** from ground truth and AI perception data
-- **Generate predictive collision boundaries** accounting for uncertainty
+- **Generate preventable collision boundaries** accounting for uncertainty
 - **Evaluate safety models** (PCB, RSS, JRC) across multiple scenarios
 - **Validate and verify** motion planning and collision avoidance logic
 
