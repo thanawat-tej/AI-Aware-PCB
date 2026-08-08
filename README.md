@@ -1,6 +1,6 @@
-# AI-Aware PCB (Predictive Collision Boundary)
+# AI-Aware PCB (Preventable Collision Boundary)
 
-A comprehensive safety verification framework for autonomous driving systems that combines perception characterization with predictive collision boundary modeling.
+A comprehensive safety verification framework for autonomous driving systems that combines perception characterization with preventable collision boundary modeling.
 
 ## Overview
 
