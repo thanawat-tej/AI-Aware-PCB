@@ -43,14 +43,106 @@ AI-Aware-PCB/
 │   ├── verify_partial_phase.py        # Phase analysis
 │   └── plot_accel_profile.py          # Acceleration visualization
 │
-└── output/                  # Generated figures and results
-    ├── AI-PCB/                   # PCB boundary plots
-    │   ├── deceleration/
-    │   ├── cut-in/
-    │   └── cut-out/
-    ├── full_autoware/           # Full scenario outputs
-    └── sanitize_data/           # Processed data storage
+├── CODE_STYLE.md            # Code conventions
+├── requirements.txt
+├── setup.py
+└── output/                  # Generated figures (see "Output Sets" below)
+    ├── AI-PCB/                   # 110 analytic boundary plots (no data overlaid)
+    │   ├── deceleration/         #   10
+    │   ├── cut-in/               #   45
+    │   └── cut-out/              #   55
+    └── experiment/               # data-overlaid evaluation figures
+        ├── full_autoware/        #  118 binned 3-model panels, full dataset
+        ├── sanitize_data/        #  101 binned 3-model panels, sanitized dataset
+        └── full_autoware_AI-PCB/ # 7529 exact-speed single-model panels
 ```
+
+## Scenario Data
+
+The Autoware scenario recordings are **not distributed in this repository**. Each
+run is a YAML holding the ego's estimated kinematics, the ground-truth vehicle
+states and the perception objects, and the full set is far past what a Git
+repository should carry (~16 GB), so it is hosted separately.
+
+Expected layout once obtained — the pipeline reads from these directories:
+
+```
+Autoware_data/
+└── cutout_yaml/          # 1,638 scenario YAMLs (cut-out); likewise for the
+                          #   deceleration and cut-in families
+```
+
+Convert to the CSV the evaluation tools consume:
+
+```bash
+python3 data_pipeline/yaml_to_json.py  Autoware_data/<family>_yaml/  JSON_Data_<family>/
+python3 data_pipeline/json_to_csv.py   JSON_Data_<family>/  sut.csv  --mode snapshot
+```
+
+Use `--mode snapshot` for contact and impact statistics (one row per run) and
+`--mode all` for per-frame region occupancy; mixing them silently corrupts both.
+
+## Output Sets
+
+The four populated output folders answer different questions and are **not**
+interchangeable. The panel count differs by an order of magnitude between them
+because the *grouping rule* differs, not because data is missing.
+
+| Folder | Source | Grouping | Panels | Rows shown |
+|--------|--------|----------|--------|------------|
+| `AI-PCB/` | none (analytic) | one plot per nominal speed pair | 110 | n/a |
+| `experiment/full_autoware/` | `sut_new.csv` (10,914 rows) | speed **bins** of 2 m/s, `--min-rows 1` | 118 | **100%** |
+| `experiment/sanitize_data/` | `sut_sanitized.csv` (5,324 rows) | speed **bins** of 2 m/s, `--min-rows 1` | 101 | **100%** |
+| `experiment/full_autoware_AI-PCB/` | `sut_new.csv` | **exact** measured speed pair, `--min-rows 1` | 7,529 | 100% |
+
+The two `experiment/` sets are the **3-model comparison** (RSS | JRC | AI-PCB,
+`--zones-all`). `--all-pairs` merges every ego/lead speed inside a 2 m/s bin into
+one panel; `--min-rows 1` keeps every bin, however thin, so no row is dropped.
+The default `--min-rows 30` would discard bins under 30 rows and lose coverage:
+
+| `--min-rows` | panels | rows shown |
+|---|---|---|
+| 1 (used here) | 118 | **100%** |
+| 5 | 72 | 99.2% |
+| 10 | 60 | 98.5% |
+| 30 (default) | 37 | 95.2% |
+
+Binning is what makes the comparison informative: because a panel spans a *range*
+of speeds, the best/median/worst envelope has real width and each model shows its
+speed-range uncertainty.
+
+`experiment/full_autoware_AI-PCB/` is a different question — a **single-model** (`--pcb-only`)
+view grouped on the **exact** measured `(u_t, w)` floats. Those almost never
+repeat, so it is close to one panel per row: 7,529 files for 10,914 rows. With one
+exact speed per panel the envelope collapses to a single curve, and the median
+panel holds one data point.
+
+### Regenerating
+
+```bash
+# binned 3-model panels (RSS | JRC | AI-PCB), all scenarios
+python3 plot_boundaries_all.py csv_new/sut_new.csv --scenario all --gap perceived \
+    --outdir output/experiment/full_autoware \
+    --all-pairs --min-rows 1 --zones-all --data-boundary
+
+python3 plot_boundaries_all.py csv_new/sut_sanitized.csv --scenario all --gap perceived \
+    --outdir output/experiment/sanitize_data \
+    --all-pairs --min-rows 1 --zones-all --data-boundary
+
+# exact-speed single-model panels
+python3 plot_boundaries_all.py csv_new/sut_new.csv --scenario all --gap perceived \
+    --pcb-only --all-pairs --exact-pairs --min-rows 1 --max-plots 9000 \
+    --outdir output/experiment/full_autoware_AI-PCB
+```
+
+> **The scripts under `Evaluation/` have diverged from the working copies that
+> produced the current figures.** `plot_boundaries.py` is 157 lines here versus
+> 538 in the working tree; `compare_boundaries.py` and
+> `diagnose_false_negatives.py` also differ. Only `json_to_csv.py` is identical.
+> The repository copies do **not** have `--scenario all`, `--exact-pairs`,
+> `--cutout-y`, the cut-out boundary, the JRC best/median/worst envelope, or the
+> zero-anchored axes. Sync them before treating this README's commands as
+> reproducible from a clean clone.
 
 ## Installation
 
@@ -318,5 +410,5 @@ If you use AI-Aware PCB in your research, please cite:
 
 ---
 
-**Last Updated**: August 2026  
-**Status**: Not updated
+**Last Updated**: 13 August 2026  
+**Status**: Figures current; `Evaluation/` scripts pending sync with the working tree
