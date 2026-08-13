@@ -68,8 +68,9 @@ Expected layout once obtained — the pipeline reads from these directories:
 
 ```
 Autoware_data/
-└── cutout_yaml/          # 1,638 scenario YAMLs (cut-out); likewise for the
-                          #   deceleration and cut-in families
+├── decel_yaml/           # 1652 files
+├── cutin_yaml/           # 7798 files
+└── cutout_yaml/          # 1,638 files
 ```
 
 Convert to the CSV the evaluation tools consume:
